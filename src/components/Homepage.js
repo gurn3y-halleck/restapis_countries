@@ -6,17 +6,29 @@ import axios from "axios";
 
 }*/
 
+class DataFormat {
+    constructor(){
+        this.name = '';
+        this.flag = '';
+        this.population = '';
+        this.region = '';
+        this.capital = '';
+    }
+};
+
+class arDataFormat {
+    constructor(){
+        this.length = 0;
+        this.data = [];
+    }
+}
+
+
 const Homepage = () => {
 
-    const [data, setData] = useState({
-        name:'',
-        flag:'',
-        population:'',
-        region:'',
-        capital:'',
-    });
+    const [arData, setArData] = useState(new arDataFormat());
     const [totalCountries, setTotalCountries] = useState(0);
-
+    const [region, setRegion] = useState("all");
     //const [responseData, setResponseData] = useState(null);
     //DummyArray
     const myAr = ["ar1", "ar2", "ar3"];
@@ -27,8 +39,22 @@ const Homepage = () => {
     },[]);
 
     useEffect(() => {
-        console.log("Data value Changed : ", data);
-    },[data]);
+        console.log("Data value Changed : ", arData);
+    },[arData]);
+
+    const populateAr = (apiResponse, targetAr) => {
+        for(var i=0;i<apiResponse.data.length;i++)
+        {
+            //Create object
+            const country = new DataFormat();
+            country.name = apiResponse.data[i].name.common;
+            country.capital = apiResponse.data[i].capital[0];
+            country.flag = apiResponse.data[i].flags.svg;
+            country.population = apiResponse.data[i].population;
+            country.region = apiResponse.data[i].region;
+            targetAr.push(country);
+        }
+    }
 
     const fetchData = async () => {
         const response = await axios.get('https://restcountries.com/v3.1/all?fields=name,flags,population,region,capital');
@@ -36,19 +62,74 @@ const Homepage = () => {
         console.log(response.data);
         console.log("Response Length : ", response.data.length);
         setTotalCountries(response.data.length);
-        //setResponseData(response.data);
-        console.log("First Country \nName : ", response.data[0].name.common, "\nCapital : ", response.data[0].capital[0]);
-        console.log("Flag : ", response.data[0].flags.svg);
-        console.log("Population : ", response.data[0].population);
-        console.log("Region :", response.data[0].region);
 
-        //
+        const arCountries = []; //[country1, country2];
+        const arLength = response.data.length;
+        populateAr(response,arCountries);
 
-        setData({name : response.data[0].name.common,
-             flag: response.data[0].flags.svg,
-             population : response.data[0].population, 
-             region : response.data[0].region, 
-             capital : response.data[0].capital[0]});
+        //set
+        setArData ({length:arLength,
+                    //data: [country1, country2]
+                    data: arCountries,
+                });
+    }
+
+    const renderCountry = (country) => {
+        return(
+            <Country key={country.name}>
+                <CountryFlag src = {country.flag} alt=""/>
+                <CountryName>{country.name}</CountryName>
+                <CountryPopulation>Population : {country.population}</CountryPopulation>
+                <CountryRegion>Region : {country.region}</CountryRegion>
+                <CountryCapital>Capital : {country.capital}</CountryCapital>
+            </Country>
+        );
+    }
+
+    const renderCountries = () => {
+        if(arData.length > 0)
+        {
+            console.log(arData);
+            if(region==='all')
+            {
+                console.log("Rendering all countries");
+                return(
+                    <DisplayCountries>
+                        {arData.data.map((country) => {
+                            return(
+                                <Country key={country.name}>
+                                    <CountryFlag src = {country.flag} alt=""/>
+                                    <CountryName>{country.name}</CountryName>
+                                    <CountryPopulation>Population : {country.population}</CountryPopulation>
+                                    <CountryRegion>Region : {country.region}</CountryRegion>
+                                    <CountryCapital>Capital : {country.capital}</CountryCapital>
+                                </Country>
+                            );
+                        } )}
+                    </DisplayCountries>
+                );
+            }
+            else{
+                console.log("Rendering countries of region = ",region);
+                return(
+                    <DisplayCountries>
+                        {arData.data.map((country) => {
+                            if(country.region === region)
+                            {   
+                                console.log("RegionCheckPass");
+                                return renderCountry(country);
+                            }
+                        })}
+                    </DisplayCountries>
+                )
+            }
+        }
+        else
+        {
+            return(
+                <div></div>
+            );
+        }
     }
 
     return (
@@ -58,29 +139,16 @@ const Homepage = () => {
                     <SearchIcon>&#128269;</SearchIcon>
                     <Input />
                 </SearchContainer>
-                <FilterBy defaultValue="Filter By Region">
-                    <option defaultValue="Filter By Region" disabled>Filter By Region</option>
+                <FilterBy defaultValue="all" onChange={(e) => setRegion(e.target.value)}>
+                    <option value="all" defaultValue>Filter By Region</option>
                     <option value="Africa">Africa</option>
-                    <option value="America">America</option>
+                    <option value="Americas">Americas</option>
                     <option value="Asia">Asia</option>
                     <option value="Europe">Europe</option>
                     <option value="Oceania">Oceania</option>
                 </FilterBy>
             </Filters>
-            <DisplayCountries>
-                <Country>
-                    <CountryFlag src = {data.flag} alt=""/>
-                    <CountryName>{data.name}</CountryName>
-                    <CountryPopulation>Population : {data.population}</CountryPopulation>
-                    <CountryRegion>Region : {data.region}</CountryRegion>
-                    <CountryCapital>Capital : {data.capital}</CountryCapital>
-                </Country>
-            </DisplayCountries>
-            <DummyArray>
-                {myAr.map( (value, index) => (
-                    <div key={index}>{value}</div>
-                ) )}
-            </DummyArray>
+            {renderCountries()}
         </Container>
     );
 };
